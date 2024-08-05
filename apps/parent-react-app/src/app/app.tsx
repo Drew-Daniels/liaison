@@ -15,6 +15,7 @@ export function App() {
       src: import.meta.env.VITE_IFRAME_URL,
     },
     // define effects that the iframe can call on the parent
+    // this effect will be called by the iframe when we click the logout button within the iframe
     effects: {
       onIFrameLogout: () => {
         setEmail('');
@@ -52,12 +53,12 @@ export function App() {
           <LoginForm
             onSubmit={(e) => {
               e.preventDefault();
-
               const { userEmail } = e.currentTarget.elements;
-              setEmail(userEmail.value);
-              // TODO: Update internal state to display logged in user information
 
-              // Provide User information to the iframe
+              // update internal parent application state
+              setEmail(userEmail.value);
+
+              // send a MessageEvent to the iframe application with information about the user that just "logged in"
               callIFrameEffect({
                 name: 'onParentWindowLogin',
                 args: {

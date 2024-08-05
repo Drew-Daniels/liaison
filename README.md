@@ -3,39 +3,86 @@ _Liaison_ is a simple library with 0 dependencies that enables easy, secure comm
 
 > The window.postMessage() method safely enables cross-origin communication between Window objects; e.g., between a page and a pop-up that it spawned, or between a page and an iframe embedded within it.
 
+### Use Case
+The `postMessage` API allows for easy cross-origin resource sharing between windows and embedded applications, however you still need to:
+- Create event listeners manually that listen for `MessageEvents` from specific origins
+- Manage removal of event listeners where necessary
+  - Such as in `React` applications, where you need to ensure that they are removed when a component is unmounted
+- Define an API contract between window and iframe code that can be used to reliably transmit data across applications
+  - This is especially difficult if you only have control over one application's code
+
+`liaison` makes it easy to just define who you expect to receive messages from, and how you want these messages to be handled when they occur without needing to worry about all of the other implementation details around using the `postMessage` API.
+
+### Examples
+
+#### Authentication
+Often times the user using the parent window application will be associated in some way to the user using the embedded application, so it's helpful to have some sort of mechanism that allows information about the user to be shared across these applications. This could be anything from metadata about the user, or authorization tokens allowing the embedded application to authenticate with some external API on behalf of that user.
+
+#### Events
+When you want some event to occur in one application as a result of something happening in the other. An example could be that when an application is loaded in an iframe, you want it to request the parent application for the authorization token belonging to the user using the parent window application. You could use `liaison` to dispatch a `MessageEvent` to the parent window that will result in the authorization token being sent back to the iframe application.
+
 ### Parent Model
-The `Parent` model is used to:
-- Define side effects (`effects`) that the `IFrame` model can expect to have the parent window run - _whenever_ it requests the parent window to run them. 
+The `Parent` model is used to define functions (`Effects`) that can be run in the parent application whenever the iframe application requests they be run.
 
-For most use cases, these side effects are going to be used for 2 general purposes:
-- _Requesting_ the parent window send data to an iframe
-    - Ex.) Authorization tokens
-- _Notifying_ the parent window that some event has occurred within an iframe.
-    - Ex.) Informing the parent window that an iframe has finished logging a user out of the iframe.
+### IFrame Model
+The `IFrame` model is used to define functions (`Effects`) that can be run the iframe application whenever the parent application requests they be run.
 
-#### Initialization
-The Parent factory function specifies the id of the iframe we expect to receive messages from, and the [origin](https://html.spec.whatwg.org/multipage/comms.html#dom-messageevent-origin-dev) we should validate that those messages originate from.
+#### Effects
+An `Effect` is a function defined on one model, that the the other model can request be called at anytime. These functions can be synchronous or asynchronous.
+
 ```js
-const parent = Parent({
-    iframe: {
-        id: 'my-iframe-id',
-        src: 'https://embedded.com',
+
+// In the iframe application code, we use the "IFrame" factory function to:
+// - initialize event listeners for any MessageEvents that come from the parent window with an origin of "https://my-application.com"
+// - get a reference to a callback function, "cb" so we can dispatch MessageEvents to the parent window with an origin of "https://my-application.com"
+const { cb: callParentEffect } = IFrame({
+  parentOrigin: 'https://my-application.com',
+  effects: {
+    onParentLogout: () => {
+      setUser(null);
     }
-    ...
+  }
+})
+
+// Here we are defining a function that, when called, will update the internal state of the iframe application, as well as notify the parent application that the user has logged out in the iframe
+function logout() {
+  setUser(null);
+  callParentEffect({
+    name: 'onIFrameLogout'
+  })
+}
+
+// In the parent application code, we use the "Parent" factory function to:
+// - initialize event listeners for any MessageEvents that come from the iframe window with an id of "my-embedded-iframe" and origin of "https://my-iframe-application.com"
+// - get a reference to a callback function, "cb" so we can dispatch MessageEvents to this iframe application
+
+const { cb: callIFrameEffect } = Parent({
+    iframe: {
+      id: 'my-embedded-iframe',
+      src: 'https://my-iframe-application.com'
+    },
+    effects: {
+      onIFrameLogout: () => {
+        setUser(null)
+      },
+    }
 });
-```
-Both `iframe.id` and `iframe.src` _are required_.
 
-#### Lifecycle Methods
-The `Parent` model sets all event handlers when it is initially called (`Parent({ ... })`)
+function login() {
+  callIFrameEffect({
+    name: 'onParentLogin',
+    args: {
+      email: 'user@email.com'
+    }
+  })
+}
 
-The `destroy()` removes all event listeners on the parent window that are listening for signals from the specified iframe:
-```js
-// initialize event handlers
-const parent = Parent({ ... });
-
-// remove event handlers if needed
-parent.destroy();
+function logout() {
+  callIFrameEffect({
+    name: 'onParentLogout',
+    args: {}
+  })
+}
 ```
 
 #### Message Handling (`Signals`)
@@ -44,226 +91,3 @@ When the parent window receives a [MessageEvent](https://developer.mozilla.org/e
     - If the message has _any other origin_ than `src`, it is completely ignored.
 - If the `origin` matches `src`, the Parent model checks to ensure that the data passed in the `MessageEvent` matches the expected API (i.e., contains a `Signal`)
 - If the `MessageEvent` contains a `Signal`, this `Signal` is then used to call a corresponding `Effect` on the IFrame model.
-
-#### Effects
-_`Effects`_ (a.k.a., "side effects") are functions defined on the Parent model, that the Parent model can expect to call on the IFrame model.
-```js
-const parent = Parent({
-    ...
-    effects: {
-        // each `effect` can be synchronous
-      sendToken: () => {
-        const token = nanoid();
-        // ...
-      },
-        // ... or asynchronous
-        sendTokenAsync: async () => {
-            await timeout(3000);
-            const token = nanoid();
-            // ... 
-        }
-    }
-});
-
-// ...
-function timeout(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-```
-Each `effect` has access to an `args` object, which contains all the arguments passed from the `IFrame` model when it requests a certain side effect occur in the parent window:
-```js
-// ... in parent window
-const parent = Parent({
-    ...
-    effects: {
-      logMessageFromIFrame: ({ args }) => {
-        console.log(`Message received from iframe: ${args.message}`)
-      },
-    }
-});
-
-// ... in iframe window
-const iframe = IFrame({ ... });
-iframe.callParentEffect({ 
-    name: 'logMessageFromIFrame',
-    args: { message: 'Greetings' },
-});
-
-// logs "Message received from iframe: Greetings"
-```
-Each `effect` defined in the call to `Parent` has access to the `callIFrameEffect` function, allowing it to _call back to the iframe_:
-
-```js
-// ... in parent window
-const parent = Parent({
-    ...
-    effects: {
-      sendToken: ({ callIFrameEffect }) => {
-        const token = nanoid();
-        callIFrameEffect({
-            name: 'saveToken',
-            args: { token }
-        });
-      },
-    }
-});
-
-// ... in iframe window
-const iframe = IFrame({
-    ...
-    effects: {
-        saveToken: ({ token }) => {
-            localStorage.setItem('authToken', token);
-        }
-    }
-});
-```
-
-You can also use both `args` and `callIFrameEffect` together:
-```js
-// ... in parent window
-const parent = Parent({
-    ...
-    effects: {
-      sendToken: ({ args, callIFrameEffect }) => {
-        if (args.system === 'client1') {
-            token = 'xyz';
-        } else {
-            token = 'zyx';
-        }
-        callIFrameEffect({
-            name: 'saveToken',
-            args: { token }
-        });
-      },
-    }
-});
-```
-#### All Together:
-```js
-const parent = Parent({
-    iframe: {
-        id: 'my-iframe-id',
-        src: 'https://embedded.com',
-    },
-    effects: {
-      sendToken: ({ args, callIFrameEffect }) => {
-        if (args.system === 'client1') {
-            token = 'xyz';
-        } else {
-            token = 'zyx';
-        }
-        callIFrameEffect({
-            name: 'saveToken',
-            args: { token }
-        });
-      },
-    }
-});
-```
-
-### IFrame Model
-The `IFrame` model is used to:
-- Define side effects (`effects`) that the `Parent` model can expect to have the iframe window run - _whenever_ it requests the iframe window to run them. 
-
-Similarly to the `Parent` model, these effects can be used to enable the parent window to:
-- _Request_ data from the iframe
-- _Notify_ the iframe that some event has occurred in the parent window.
-
-#### Configuration
-The iframe model will only initiate side effects in response to messages that have been verified to come from a recognized domain (`parentOrigin`):
-```js
-const iframe = IFrame({
-    parentOrigin: 'https://parent.com',
-    ...
-});
-```
-
-#### Effects
-Each `effect` defined on the `IFrame` model can be synchronous or asynchronous:
-```js
-const iframe = IFrame({
-    ...
-    effects: {
-        load: () => {
-            // fetch some data
-        },
-        lazyLoad: async () => {
-            timeout(3000);
-            // fetch some data
-        }
-    }
-});
-
-// ...
-function timeout(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-```
-Each `effect` defined on the `IFrame` model has access to the `args` object containing all the arguments passed from the parent window to be used with this `effect`:
-```js
-const iframe = IFrame({
-    parentOrigin: 'https://parent.com'
-    effects: {
-        saveData: ({ args }) => {
-            // save this data to a db
-        },
-    }
-});
-```
-
-Each `effect` defined on the `IFrame` model has access to the `callParentEffect` function so it can _call back to the parent window_:
-```js
-const iframe = IFrame({
-    parentOrigin: 'https://parent.com'
-    effects: {
-        notifyParent: ({ callParentEffect }) => {
-            callParentEffect({ name: 'notify', args: { notification: 'Something happened' } })
-        },
-    }
-});
-
-// ... in window with url of 'https://parent.com'
-const parent = Parent({
-    ...
-    effects: {
-        notify: ({ args }) => {
-            console.log(`Notification: ${args.notification}`)
-        },
-    }
-});
-
-// logs "Notification: Something happened"
-```
-
-## API Glossary:
-### Parent window
-The browser window that contains an embedded window
-
-### Parent model
-The function that can be used to define which iframe the parent window expects to receive signals from, and what effects can run when the iframe requests them to be run.
-```js
-// use named import
-import { Parent } from 'liaison-core';
-```
-
-### IFrame window
-The embedded iframe window within the parent window
-
-### IFrame model
-The function that can be used to define which origin it can expect to receive signals from, and what effects can be run when the that origin requests them to be run.
-```js
-// use named import
-import { IFrame } from 'liaison-core';
-```
-
-
-### Signals:
-A `Signal` is an object that contains all the data needed for one client to understand what function it needs to run and the arguments it needs to call that function with.
-
-- The `name` property indicates the _name of the `Effect`_ one client (`Parent` or `IFrame`) wants to _initiate on the other_.
-
-- The `args` property is an object containing all of the arguments that the client was the other to include in its call to that effect.
-
-### Effects
-An `Effect` is a function that can be run on one of the clients, whenever the other client requests it be run.

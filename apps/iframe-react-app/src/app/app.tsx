@@ -10,13 +10,11 @@ function App() {
     parentOrigin: import.meta.env.VITE_PARENT_WINDOW_URL,
     // define the effects that the parent window can call on the iframe
     effects: {
+      // onParentWindowLogin will be called by the parent window when we submit the login form in the parent window
       onParentWindowLogin: ({ args: { email } }) => {
-        if (email && typeof email === 'string') {
-          setEmail(email);
-        } else {
-          // callParentEffect({ name: 'onLoginFailed' });
-        }
+        setEmail(email as string);
       },
+      // onParentWindowLogout will be called by the parent window when we click the logout button in the parent window
       onParentWindowLogout: () => {
         setEmail('');
       },
