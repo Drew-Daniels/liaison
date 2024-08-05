@@ -36,7 +36,7 @@ export default defineConfig({
   // },
 
   build: {
-    outDir: '../../dist/apps/liaison',
+    outDir: '../../dist/apps/parent-react-app',
     emptyOutDir: true,
     reportCompressedSize: true,
     commonjsOptions: {
