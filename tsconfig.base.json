@@ -14,7 +14,14 @@
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
-    "paths": {}
+    "paths": {
+      "@liaison/constants": ["libs/constants/src/index.ts"],
+      "@liaison/core": ["libs/core/src/index.ts"],
+      "@liaison/react": ["libs/react/src/index.ts"],
+      "@liaison/types": ["libs/types/src/index.ts"],
+      "@liaison/ui": ["libs/ui/src/index.ts"],
+      "@liaison/utils": ["libs/utils/src/index.ts"]
+    }
   },
   "exclude": ["node_modules", "tmp"]
 }

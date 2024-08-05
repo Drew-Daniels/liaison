@@ -57,9 +57,16 @@
       },
       "library": {
         "style": "tailwind",
-        "linter": "eslint"
+        "linter": "eslint",
+        "unitTestRunner": "vitest"
       }
     }
   },
-  "nxCloudAccessToken": "YzMwNmY3MmItMTFlYy00MzE2LTkzY2YtZTJiNmI3MDFiMDVifHJlYWQtd3JpdGU="
+  "targetDefaults": {
+    "@nx/js:tsc": {
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production"]
+    }
+  }
 }
