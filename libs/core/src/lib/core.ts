@@ -55,14 +55,14 @@ export function Parent({ iframe: { id, src }, effects }: ParentOpts): Client {
 
     function _validateIFrameId() {
       const iframe = document.getElementById(id);
-      if (iframe && !isIFrame(iframe)) {
+      if (!isIFrame(iframe)) {
         throw new Error(
-          `An element with an id of ${id} was found, but was actually a ${iframe.nodeName}`
+          `An iframe with an id of ${id} could not be found on the page`
         );
       }
 
-      function isIFrame(el: HTMLElement) {
-        return el.nodeName === 'IFRAME';
+      function isIFrame(el: HTMLElement | null): el is HTMLIFrameElement {
+        return el !== null && el.nodeName === 'IFRAME';
       }
     }
   }
