@@ -7,6 +7,9 @@ export default defineConfig({
     watch: false,
     globals: true,
     environment: 'jsdom',
+    env: {
+      VITE_IFRAME_URL: 'http://localhost:4201',
+    },
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
 
     reporters: ['default'],

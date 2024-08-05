@@ -7,6 +7,9 @@ export default defineConfig({
     watch: false,
     globals: true,
     environment: 'jsdom',
+    env: {
+      VITE_PARENT_WINDOW_URL: 'http://localhost:4200',
+    },
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
 
     reporters: ['default'],
@@ -19,7 +22,7 @@ export default defineConfig({
   cacheDir: '../../node_modules/.vite/apps/iframe-react-app',
 
   server: {
-    port: 4200,
+    port: 4201,
     host: 'localhost',
   },
 
