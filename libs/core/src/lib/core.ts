@@ -1,36 +1,4 @@
-type Effect = (params: {
-  cb: (signal: Signal) => void;
-  args: Record<string, unknown>;
-}) => void;
-
-export interface SignalEvent extends MessageEvent {
-  data: Signal;
-}
-
-export interface Signal {
-  name: string;
-  args?: Record<string, unknown>;
-}
-
-export interface Client {
-  cb: (signal: Signal) => void;
-  destroy: () => void;
-}
-
-export type Hook = Omit<Client, 'destroy'>;
-
-interface BaseClientOpts {
-  effects: Record<string, Effect>;
-}
-
-export interface ParentOpts extends BaseClientOpts {
-  iframeId: string;
-  iframeSrc: string;
-}
-
-export interface IFrameOpts extends BaseClientOpts {
-  targetOrigin: string;
-}
+import { Effect, Signal, SignalEvent } from "@liaison/types";
 
 export class ClientContract {
   readonly effects: Record<string, Effect>;

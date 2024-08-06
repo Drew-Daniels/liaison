@@ -1,15 +1,13 @@
 import { useRef, useEffect } from 'react';
-import {
-  ParentContract,
-  IFrameContract,
-  ParentOpts,
-  IFrameOpts,
-  Signal,
-  Client,
-} from '@liaison/core';
+import { ParentContract, IFrameContract } from '@liaison/core';
+import { ParentOpts, IFrameOpts, Signal, Client } from '@liaison/types';
 
 /** Registers Effects that an iframe with an id of `id` and a src of `src` can enact on the parent window, and returns a `cb` function that can be used to enact events on an iframe */
-export function useParentContract({ iframeId, iframeSrc, effects }: ParentOpts) {
+export function useParentContract({
+  iframeId,
+  iframeSrc,
+  effects,
+}: ParentOpts) {
   const parentRef = useRef<Client | null>(null);
 
   useEffect(() => {
