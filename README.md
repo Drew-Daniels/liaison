@@ -31,10 +31,10 @@ An `Effect` is a function defined on one model, that the the other model can req
 
 ```js
 
-// In the iframe application code, we use the "IFrame" factory function to:
+// In the iframe application code, we use the "IFrameContract" class to:
 // - initialize event listeners for any MessageEvents that come from the parent window with an origin of "https://my-application.com"
 // - get a reference to a callback function, "cb" so we can dispatch MessageEvents to the parent window with an origin of "https://my-application.com"
-const { cb: callParentEffect } = IFrameContract({
+const { cb: callParentEffect } = new IFrameContract({
   targetOrigin: 'https://my-application.com',
   effects: {
     onParentLogout: () => {
@@ -51,11 +51,11 @@ function logout() {
   })
 }
 
-// In the parent application code, we use the "Parent" factory function to:
+// In the parent application code, we use the "ParentContract" class to:
 // - initialize event listeners for any MessageEvents that come from the iframe window with an id of "my-embedded-iframe" and origin of "https://my-iframe-application.com"
 // - get a reference to a callback function, "cb" so we can dispatch MessageEvents to this iframe application
 
-const { cb: callIFrameEffect } = ParentContract({
+const { cb: callIFrameEffect } = new ParentContract({
     iframeId: 'my-embedded-iframe',
     iframeSrc: 'https://my-iframe-application.com',
     effects: {
