@@ -29,8 +29,6 @@ export interface ParentOpts extends BaseClientOpts {
 }
 
 export interface IFrameOpts extends BaseClientOpts {
-  // TODO: Add support for multiple whitelisted URLs - in cases where the iFrame could be used in different sites
-  /** The URL where your iframe expects to receive messages from: https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage#targetorigin */
   targetOrigin: string;
 }
 
@@ -54,7 +52,6 @@ export class ClientContract {
     window.removeEventListener('message', this.onMessageEvent);
   }
 
-  // Have to use arrow function here to preserve `this`
   protected onMessageEvent = (messageEvent: MessageEvent) => {
     if (this.isWhitelisted(messageEvent)) {
       if (this.isSignal(messageEvent)) {
@@ -62,7 +59,7 @@ export class ClientContract {
         this.callEffect(name, args);
       }
     }
-  }
+  };
 
   private callEffect(name: string, args: Record<string, unknown>) {
     if (this.effects[name]) {
@@ -75,10 +72,8 @@ export class ClientContract {
   }
 
   private isSignal(e: MessageEvent): e is SignalEvent {
-    if (e.data as Signal) {
-      return true;
-    }
-    return false;
+    const { data } = e;
+    return 'name' in data;
   }
 
   private isWhitelisted(messageEvent: MessageEvent) {
