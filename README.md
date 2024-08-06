@@ -55,7 +55,7 @@ function logout() {
 // - initialize event listeners for any MessageEvents that come from the iframe window with an id of "my-embedded-iframe" and origin of "https://my-iframe-application.com"
 // - get a reference to a callback function, "cb" so we can dispatch MessageEvents to this iframe application
 
-const { cb: callIFrameEffect } = ParentContract{
+const { cb: callIFrameEffect } = ParentContract({
     iframeId: 'my-embedded-iframe',
     iframeSrc: 'https://my-iframe-application.com',
     effects: {
