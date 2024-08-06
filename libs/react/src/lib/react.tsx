@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
 import {
-  Parent,
-  IFrame,
+  ParentContract,
+  IFrameContract,
   ParentOpts,
   IFrameOpts,
   Signal,
@@ -9,28 +9,22 @@ import {
 } from '@liaison/core';
 
 /** Registers Effects that an iframe with an id of `id` and a src of `src` can enact on the parent window, and returns a `cb` function that can be used to enact events on an iframe */
-export function useParent({ iframe: { id, src }, effects }: ParentOpts) {
+export function useParentContract({ iframeId, iframeSrc, effects }: ParentOpts) {
   const parentRef = useRef<Client | null>(null);
 
   useEffect(() => {
-    parentRef.current = Parent({
-      iframe: {
-        id,
-        src,
-      },
-      effects,
-    })
+    parentRef.current = new ParentContract(iframeId, iframeSrc, effects);
     return () => {
       if (parentRef.current) {
         parentRef.current.destroy();
         parentRef.current = null;
       }
-    }
-  }, [effects, id, src]);
+    };
+  }, [effects, iframeId, iframeSrc]);
 
   return {
     cb,
-  }
+  };
 
   function cb(signal: Signal) {
     if (parentRef.current) {
@@ -39,27 +33,24 @@ export function useParent({ iframe: { id, src }, effects }: ParentOpts) {
   }
 }
 
-/** Registers Effects that a parent window with an origin of `parentOrigin` can enact on the iframe, and returns a `cb` function that can be used to enact events on a parent window */
-export function useIFrame({ parentOrigin, effects }: IFrameOpts) {
+/** Registers Effects that a parent window with an origin of `targetOrigin` can enact on the iframe, and returns a `cb` function that can be used to enact events on a parent window */
+export function useIFrameContract({ targetOrigin, effects }: IFrameOpts) {
   const iFrameModelRef = useRef<Client | null>(null);
 
   useEffect(() => {
-    iFrameModelRef.current = IFrame({
-      parentOrigin,
-      effects,
-    });
+    iFrameModelRef.current = new IFrameContract(targetOrigin, effects);
 
     return () => {
       if (iFrameModelRef.current) {
         iFrameModelRef.current.destroy();
-        iFrameModelRef.current = null
+        iFrameModelRef.current = null;
       }
     };
-  }, [effects, parentOrigin]);
+  }, [effects, targetOrigin]);
 
   return {
     cb,
-  }
+  };
 
   function cb(signal: Signal) {
     if (iFrameModelRef.current) {

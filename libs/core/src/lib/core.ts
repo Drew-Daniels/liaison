@@ -19,184 +19,142 @@ export interface Client {
 
 export type Hook = Omit<Client, 'destroy'>;
 
-export interface ParentIFrameOpts {
-  id: string;
-  src: string;
-}
-
 interface BaseClientOpts {
-  /** The Effects that the Parent model can enact on the IFrame or those that the IFrame model can enact on the Parent */
   effects: Record<string, Effect>;
 }
 
 export interface ParentOpts extends BaseClientOpts {
-  iframe: ParentIFrameOpts;
+  iframeId: string;
+  iframeSrc: string;
 }
 
 export interface IFrameOpts extends BaseClientOpts {
   // TODO: Add support for multiple whitelisted URLs - in cases where the iFrame could be used in different sites
   /** The URL where your iframe expects to receive messages from: https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage#targetorigin */
-  parentOrigin: string;
+  targetOrigin: string;
 }
 
-export function Parent({ iframe: { id, src }, effects }: ParentOpts): Client {
-  _init();
+export class ClientContract {
+  readonly effects: Record<string, Effect>;
+  readonly targetOrigin: string;
 
-  return {
-    cb,
-    destroy,
-  };
-
-  function _init() {
-    _validateIFrameId();
-    _validateUrl(src);
-    _validateEffects(effects);
-    window.addEventListener('message', _onMessageEvent);
-
-    function _validateIFrameId() {
-      const iframe = document.getElementById(id);
-      if (!isIFrame(iframe)) {
-        throw new Error(
-          `An iframe with an id of ${id} could not be found on the page`
-        );
-      }
-
-      function isIFrame(el: HTMLElement | null): el is HTMLIFrameElement {
-        return el !== null && el.nodeName === 'IFRAME';
-      }
-    }
+  constructor(targetOrigin: string, effects: Record<string, Effect>) {
+    this.targetOrigin = this.validateUrl(targetOrigin);
+    this.effects = this.validateEffects(effects);
   }
 
-  function _onMessageEvent(messageEvent: MessageEvent) {
-    if (_whitelisted(messageEvent, src)) {
-      if (_isSignal(messageEvent)) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  public cb(this: ClientContract, signal: Signal) {
+    throw new Error(
+      'Client model must implement a callback function to receive signals'
+    );
+  }
+
+  public destroy() {
+    window.removeEventListener('message', this.onMessageEvent);
+  }
+
+  // Have to use arrow function here to preserve `this`
+  protected onMessageEvent = (messageEvent: MessageEvent) => {
+    if (this.isWhitelisted(messageEvent)) {
+      if (this.isSignal(messageEvent)) {
         const { name, args = {} } = messageEvent.data;
-        _callEffect(name, args);
+        this.callEffect(name, args);
       }
     }
   }
 
-  function _callEffect(name: string, args: Record<string, unknown>) {
-    if (effects[name]) {
-      effects[name]({ args, cb });
+  private callEffect(name: string, args: Record<string, unknown>) {
+    if (this.effects[name]) {
+      this.effects[name]({ args, cb: this.cb });
     } else {
       console.error(
-        `[liaison] could not find an effect on the Parent model called "${name}"`
+        `[liaison] could not find an effect on the ${this.constructor.name} model called "${name}"`
       );
     }
   }
 
-  function destroy() {
-    window.removeEventListener('message', _onMessageEvent);
+  private isSignal(e: MessageEvent): e is SignalEvent {
+    if (e.data as Signal) {
+      return true;
+    }
+    return false;
   }
 
-  function cb(signal: Signal) {
+  private isWhitelisted(messageEvent: MessageEvent) {
+    return messageEvent.origin === this.targetOrigin;
+  }
+
+  private validateUrl(url: string) {
+    if (!this.isValidUrl(url)) {
+      throw new Error(`${url} is not a valid url`);
+    }
+    return url;
+  }
+
+  private isValidUrl(src: string) {
+    let url;
+    try {
+      url = new URL(src);
+    } catch {
+      return false;
+    }
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  }
+
+  private validateEffects(effects: Record<string, Effect>) {
+    Object.values(effects).forEach((effect) => {
+      if (typeof effect !== 'function') {
+        throw new Error(`${effect} is not a valid effect`);
+      }
+    });
+    return effects;
+  }
+}
+
+export class ParentContract extends ClientContract {
+  private readonly iframe: HTMLIFrameElement;
+
+  constructor(
+    iframeId: string,
+    targetOrigin: string,
+    effects: Record<string, Effect>
+  ) {
+    super(targetOrigin, effects);
+    this.iframe = this.getIFrameFromId(iframeId);
+    window.addEventListener('message', this.onMessageEvent);
+  }
+
+  public override cb(this: ParentContract, signal: Signal) {
+    this.iframe.contentWindow?.postMessage(signal, this.targetOrigin);
+  }
+
+  private getIFrameFromId(id: string) {
     const el = document.getElementById(id);
-    if (el === null) {
-      console.error(`[liaison] could not find an element with an id of ${id}`);
-      return;
-    }
-    if (!isIFrame(el)) {
-      console.error(
-        `[liaison] found an element with an id of ${id}, but it was not an iframe. Instead, it was a ${el.nodeName}`
+    if (!this.isIFrame(el)) {
+      throw new Error(
+        `An iframe with an id of ${id} could not be found on the page`
       );
-      return;
     }
-    if (el && el.contentWindow && isIFrame(el)) {
-      el.contentWindow.postMessage(signal, src);
-    } else {
-      console.error(`[liaison] could not find an iframe with an id of ${id}`);
-    }
+    return el;
   }
 
-  function isIFrame(el: HTMLElement): el is HTMLIFrameElement {
-    return el.nodeName === 'IFRAME';
+  private isIFrame(el: HTMLElement | null): el is HTMLIFrameElement {
+    return el !== null && el.nodeName === 'IFRAME';
   }
 }
 
-export function IFrame({ parentOrigin, effects }: IFrameOpts): Client {
-  _init();
-
-  return {
-    cb,
-    destroy,
-  };
-
-  function _init() {
-    _validateUrl(parentOrigin);
-    _validateEffects(effects);
-    window.addEventListener('message', _onMessageEvent);
+export class IFrameContract extends ClientContract {
+  constructor(targetOrigin: string, effects: Record<string, Effect>) {
+    super(targetOrigin, effects);
+    window.addEventListener('message', this.onMessageEvent);
   }
 
-  function destroy() {
-    window.removeEventListener('message', _onMessageEvent);
-  }
-
-  function _onMessageEvent(messageEvent: MessageEvent) {
-    if (_whitelisted(messageEvent, parentOrigin)) {
-      if (_isSignal(messageEvent)) {
-        const { name, args = {} } = messageEvent.data;
-        _callEffect(name, args);
-      }
-    }
-  }
-
-  function _callEffect(name: string, args: Record<string, unknown>) {
-    if (effects[name]) {
-      effects[name]({ args, cb });
-    } else {
-      throw new Error(
-        `Could not find an effect on the IFrame model called "${name}"`
-      );
-    }
-  }
-
-  function cb(signal: Signal) {
+  public override cb(this: IFrameContract, signal: Signal) {
     if (top == null)
       throw new Error(
         'IFrame model must be rendered within an embedded iframe'
       );
-    top.postMessage(signal, parentOrigin);
-  }
-}
-
-function _whitelisted(messageEvent: MessageEvent, trustedOrigin: string) {
-  return messageEvent.origin === trustedOrigin;
-}
-
-function _isSignal(e: MessageEvent): e is SignalEvent {
-  if (e.data as Signal) {
-    return true;
-  }
-  return false;
-}
-
-function _validateUrl(u: string) {
-  if (!_validUrl(u)) throw new Error(`${u} is not a valid url`);
-}
-
-function _validUrl(u: string) {
-  let url;
-  try {
-    url = new URL(u);
-  } catch {
-    return false;
-  }
-  return url.protocol === 'http:' || url.protocol === 'https:';
-}
-
-function _validateEffects(effects: unknown) {
-  if (typeof effects === 'object' && effects !== null) {
-    const effectNames = Object.keys(effects);
-    // TODO: Enforce better checking here to ensure that functions passed as effects match the Effect function signature.
-    effectNames.forEach((name) => {
-      const effect = effects[name as keyof typeof effects];
-      const isEffect = typeof effect === 'function';
-      if (!isEffect) throw new Error(`${name} is not a function`);
-    });
-  } else {
-    throw new Error(
-      'effects must be an object where each property is a function'
-    );
+    top.postMessage(signal, this.targetOrigin);
   }
 }

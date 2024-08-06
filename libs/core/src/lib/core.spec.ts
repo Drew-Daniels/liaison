@@ -1,8 +1,8 @@
 import { MockInstance, vi } from 'vitest';
 
-import { Parent, IFrame } from './core';
+import { ParentContract, IFrameContract } from './core';
 
-describe('Parent', () => {
+describe('ParentContract', () => {
   describe('when an iframe with an id of "id" is not found on the page', () => {
     beforeEach(() => {
       vi.spyOn(document, 'getElementById').mockReturnValue(null);
@@ -13,14 +13,12 @@ describe('Parent', () => {
     });
 
     it('should throw', () => {
-      expect(() =>
-        Parent({
-          iframe: { id: 'id', src: 'https://example.com' },
-          effects: {
+      expect(
+        () =>
+          new ParentContract('id', 'https://example.com', {
             // eslint-disable-next-line @typescript-eslint/no-empty-function
             someEffect: () => {},
-          },
-        })
+          })
       ).toThrow();
     });
   });
@@ -46,31 +44,26 @@ describe('Parent', () => {
     });
 
     it('should throw if iframe src is not a valid url', () => {
-      expect(() =>
-        Parent({
-          iframe: { id: 'id', src: 'file://some/file/path' },
-          effects: {
+      expect(
+        () =>
+          new ParentContract('id', 'file://some/file/path', {
             // eslint-disable-next-line @typescript-eslint/no-empty-function
             someEffect: () => {},
-          },
-        })
+          })
       ).toThrow();
     });
 
     it('should add an event listener to the window', () => {
-      Parent({
-        iframe: { id: 'id', src: 'https://example.com' },
-        effects: {
-          // eslint-disable-next-line @typescript-eslint/no-empty-function
-          someEffect: () => {},
-        },
+      new ParentContract('id', 'https://example.com', {
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
+        someEffect: () => {},
       });
       expect(addEventListenerSpy).toHaveBeenCalled();
     });
   });
 });
 
-describe('IFrame', () => {
+describe('IFrameContract', () => {
   let addEventListenerSpy: MockInstance;
 
   beforeEach(() => {
@@ -90,25 +83,20 @@ describe('IFrame', () => {
     vi.resetAllMocks();
   });
 
-  it('should throw when parentOrigin is not a valid url', () => {
-    expect(() =>
-      IFrame({
-        parentOrigin: 'file://some/file/path',
-        effects: {
+  it('should throw when targetOrigin is not a valid url', () => {
+    expect(
+      () =>
+        new IFrameContract('file://some/file/path', {
           // eslint-disable-next-line @typescript-eslint/no-empty-function
           someEffect: () => {},
-        },
-      })
+        })
     ).toThrow();
   });
 
   it('should add an event listener to the window', () => {
-    IFrame({
-      parentOrigin: 'https://example.com',
-      effects: {
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
-        someEffect: () => {},
-      },
+    new IFrameContract('https://example.com', {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      someEffect: () => {},
     });
     expect(addEventListenerSpy).toHaveBeenCalled();
   });

@@ -5,9 +5,8 @@ _Liaison_ is a simple library with 0 dependencies that enables easy, secure comm
 
 ### Use Case
 The `postMessage` API allows for easy cross-origin resource sharing between windows and embedded applications, however you still need to:
-- Create event listeners manually that listen for `MessageEvents` from specific origins
-- Manage removal of event listeners where necessary
-  - Such as in `React` applications, where you need to ensure that they are removed when a component is unmounted
+- Manually create event listeners that listen for `MessageEvents` from specific origins
+- Manage removal of event listeners where necessary - such as in `React` applications, where you need to ensure that they are removed when a component is unmounted
 - Define an API contract between window and iframe code that can be used to reliably transmit data across applications
   - This is especially difficult if you only have control over one application's code
 
@@ -21,11 +20,11 @@ Often times the user using the parent window application will be associated in s
 #### Events
 When you want some event to occur in one application as a result of something happening in the other. An example could be that when an application is loaded in an iframe, you want it to request the parent application for the authorization token belonging to the user using the parent window application. You could use `liaison` to dispatch a `MessageEvent` to the parent window that will result in the authorization token being sent back to the iframe application.
 
-### Parent Model
-The `Parent` model is used to define functions (`Effects`) that can be run in the parent application whenever the iframe application requests they be run.
+### `ParentContact` Model
+The `ParentContract` model is used to define functions (`Effects`) that can be run in the parent application whenever the iframe application requests they be run.
 
-### IFrame Model
-The `IFrame` model is used to define functions (`Effects`) that can be run the iframe application whenever the parent application requests they be run.
+### `IFrameContract` Model
+The `IFrameContract` model is used to define functions (`Effects`) that can be run the iframe application whenever the parent application requests they be run.
 
 #### Effects
 An `Effect` is a function defined on one model, that the the other model can request be called at anytime. These functions can be synchronous or asynchronous.
@@ -35,8 +34,8 @@ An `Effect` is a function defined on one model, that the the other model can req
 // In the iframe application code, we use the "IFrame" factory function to:
 // - initialize event listeners for any MessageEvents that come from the parent window with an origin of "https://my-application.com"
 // - get a reference to a callback function, "cb" so we can dispatch MessageEvents to the parent window with an origin of "https://my-application.com"
-const { cb: callParentEffect } = IFrame({
-  parentOrigin: 'https://my-application.com',
+const { cb: callParentEffect } = IFrameContract({
+  targetOrigin: 'https://my-application.com',
   effects: {
     onParentLogout: () => {
       setUser(null);
@@ -56,11 +55,9 @@ function logout() {
 // - initialize event listeners for any MessageEvents that come from the iframe window with an id of "my-embedded-iframe" and origin of "https://my-iframe-application.com"
 // - get a reference to a callback function, "cb" so we can dispatch MessageEvents to this iframe application
 
-const { cb: callIFrameEffect } = Parent({
-    iframe: {
-      id: 'my-embedded-iframe',
-      src: 'https://my-iframe-application.com'
-    },
+const { cb: callIFrameEffect } = ParentContract{
+    iframeId: 'my-embedded-iframe',
+    iframeSrc: 'https://my-iframe-application.com',
     effects: {
       onIFrameLogout: () => {
         setUser(null)

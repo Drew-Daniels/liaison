@@ -1,26 +1,26 @@
-import { useIFrame, useParent } from './react';
+import { useIFrameContract, useParentContract } from './react';
 import { vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 
 vi.mock('@liaison/core', () => {
-  const Parent = vi.fn();
-  Parent.prototype.cb = vi.fn();
-  Parent.prototype.destroy = vi.fn();
+  const ParentContract = vi.fn();
+  ParentContract.prototype.cb = vi.fn();
+  ParentContract.prototype.destroy = vi.fn();
 
-  const IFrame = vi.fn();
-  IFrame.prototype.cb = vi.fn();
-  IFrame.prototype.destroy = vi.fn();
+  const IFrameContract = vi.fn();
+  IFrameContract.prototype.cb = vi.fn();
+  IFrameContract.prototype.destroy = vi.fn();
 
   return {
-    Parent,
-    IFrame,
+    ParentContract,
+    IFrameContract,
   };
 });
 
-describe('useParent', () => {
+describe('useParentContract', () => {
   it('should return a callback function', () => {
     const { result } = renderHook(() =>
-      useParent({
+      useParentContract({
         iframe: {
           id: 'id',
           src: 'src',
@@ -35,11 +35,11 @@ describe('useParent', () => {
   });
 });
 
-describe('useIFrame', () => {
+describe('useIFrameContract', () => {
   it('should return a callback function', () => {
     const { result } = renderHook(() =>
-      useIFrame({
-        parentOrigin: 'parentOrigin',
+      useIFrameContract({
+        targetOrigin: 'targetOrigin',
         effects: {
           // eslint-disable-next-line @typescript-eslint/no-empty-function
           myCustomEffect: () => {},

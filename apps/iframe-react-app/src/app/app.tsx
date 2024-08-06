@@ -1,13 +1,13 @@
 import { useState } from 'react';
 
-import { useIFrame } from '@liaison/react';
+import { useIFrameContract } from '@liaison/react';
 import { Button } from '@liaison/ui';
 
 function App() {
   const [email, setEmail] = useState('');
 
-  const { cb: callParentEffect } = useIFrame({
-    parentOrigin: import.meta.env.VITE_PARENT_WINDOW_URL,
+  const { cb: callParentEffect } = useIFrameContract({
+    targetOrigin: import.meta.env.VITE_PARENT_WINDOW_URL,
     // define the effects that the parent window can call on the iframe
     effects: {
       // onParentWindowLogin will be called by the parent window when we submit the login form in the parent window

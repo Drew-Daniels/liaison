@@ -1,4 +1,4 @@
-import { useParent } from '@liaison/react';
+import { useParentContract } from '@liaison/react';
 
 import { Button } from '@liaison/ui';
 import { LoginForm } from '../ui';
@@ -9,11 +9,9 @@ const IFRAME_ID = 'my-embedded-iframe';
 export function App() {
   const [email, setEmail] = useState('');
 
-  const { cb: callIFrameEffect } = useParent({
-    iframe: {
-      id: IFRAME_ID,
-      src: import.meta.env.VITE_IFRAME_URL,
-    },
+  const { cb: callIFrameEffect } = useParentContract({
+    iframeId: IFRAME_ID,
+    iframeSrc: import.meta.env.VITE_IFRAME_URL,
     // define effects that the iframe can call on the parent
     // this effect will be called by the iframe when we click the logout button within the iframe
     effects: {
