@@ -1,12 +1,13 @@
-import { Effect, Signal, SignalEvent } from "@liaison/types";
+import { Effect, Signal } from '@liaison/types';
+import { isSignal, validateEffects, validateUrl } from '@liaison/utils';
 
 export class ClientContract {
   readonly effects: Record<string, Effect>;
   readonly targetOrigin: string;
 
   constructor(targetOrigin: string, effects: Record<string, Effect>) {
-    this.targetOrigin = this.validateUrl(targetOrigin);
-    this.effects = this.validateEffects(effects);
+    this.targetOrigin = validateUrl(targetOrigin);
+    this.effects = validateEffects(effects);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -22,7 +23,7 @@ export class ClientContract {
 
   protected onMessageEvent = (messageEvent: MessageEvent) => {
     if (this.isWhitelisted(messageEvent)) {
-      if (this.isSignal(messageEvent)) {
+      if (isSignal(messageEvent)) {
         const { name, args = {} } = messageEvent.data;
         this.callEffect(name, args);
       }
@@ -39,39 +40,8 @@ export class ClientContract {
     }
   }
 
-  private isSignal(e: MessageEvent): e is SignalEvent {
-    const { data } = e;
-    return 'name' in data;
-  }
-
   private isWhitelisted(messageEvent: MessageEvent) {
     return messageEvent.origin === this.targetOrigin;
-  }
-
-  private validateUrl(url: string) {
-    if (!this.isValidUrl(url)) {
-      throw new Error(`${url} is not a valid url`);
-    }
-    return url;
-  }
-
-  private isValidUrl(src: string) {
-    let url;
-    try {
-      url = new URL(src);
-    } catch {
-      return false;
-    }
-    return url.protocol === 'http:' || url.protocol === 'https:';
-  }
-
-  private validateEffects(effects: Record<string, Effect>) {
-    Object.values(effects).forEach((effect) => {
-      if (typeof effect !== 'function') {
-        throw new Error(`${effect} is not a valid effect`);
-      }
-    });
-    return effects;
   }
 }
 
