@@ -16,7 +16,7 @@ function isValidUrl(src: string) {
   let url;
   try {
     url = new URL(src);
-  } catch {
+  } catch (e) {
     return false;
   }
   return url.protocol === 'http:' || url.protocol === 'https:';
@@ -31,4 +31,25 @@ function validateEffects(effects: Record<string, Effect>) {
   return effects;
 }
 
-export { isSignal, validateUrl, validateEffects };
+function getIFrameById(id: string) {
+  const el = document.getElementById(id);
+  if (!isIFrame(el)) {
+    throw new Error(
+      `An iframe with an id of ${id} could not be found on the page`
+    );
+  }
+  return el;
+}
+
+function isIFrame(el: HTMLElement | null): el is HTMLIFrameElement {
+  return el !== null && el.nodeName === 'IFRAME';
+}
+
+export {
+  isSignal,
+  isValidUrl,
+  validateUrl,
+  validateEffects,
+  getIFrameById,
+  isIFrame,
+};

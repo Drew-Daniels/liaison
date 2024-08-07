@@ -1,103 +1,98 @@
-import { MockInstance, vi } from 'vitest';
+import { vi } from 'vitest';
 
-import { ParentContract, IFrameContract } from './core';
+import { IFrameContract, ParentContract } from './core';
+import { Effect } from '@liaison/types';
 
 describe('ParentContract', () => {
-  describe('when an iframe with an id of "id" is not found on the page', () => {
+  describe('when "targetOrigin" is not a valid url', () => {
     beforeEach(() => {
-      vi.spyOn(document, 'getElementById').mockReturnValue(null);
+      vi.mock('@liaison/utils', () => ({
+        validateUrl: vi.fn().mockImplementation(() => {
+          throw new Error();
+        }),
+      }));
     });
 
     afterEach(() => {
-      vi.resetAllMocks();
+      vi.unmock('@liaison/utils');
     });
 
-    it('should throw', () => {
+    it('throws', () => {
       expect(
         () =>
-          new ParentContract('id', 'https://example.com', {
-            // eslint-disable-next-line @typescript-eslint/no-empty-function
-            someEffect: () => {},
+          new ParentContract('my-iframe-id', 'bar', {
+            foo: () => {
+              console.log('bar');
+            },
           })
       ).toThrow();
     });
   });
 
-  describe('when an iframe with an id of "id" is found', () => {
-    let addEventListenerSpy: MockInstance;
+  describe('when effects are not valid', () => {
+    it('throws', () => {
+      const effect = null as unknown as Effect;
+      expect(
+        () =>
+          new ParentContract('my-iframe-id', 'https://google.com', {
+            foo: effect,
+          })
+      ).toThrow(`${effect} is not a valid effect`);
+    });
+  });
 
+  describe('when the iframe is not found', () => {
+    const id = 'my-iframe-id';
     beforeEach(() => {
-      vi.spyOn(document, 'getElementById').mockReturnValue({
-        nodeName: 'IFRAME',
-        contentWindow: {
-          postMessage: vi.fn(),
-        },
-      } as unknown as HTMLIFrameElement);
-
-      addEventListenerSpy = vi
-        .spyOn(window, 'addEventListener')
-        .mockReturnValue();
+      vi.mock('@liaison/utils', () => ({
+        getIFrameById: vi.fn().mockImplementation(() => {
+          throw new Error(
+            `An iframe with an id of ${id} could not be found on the page`
+          );
+        }),
+      }));
     });
 
     afterEach(() => {
-      vi.resetAllMocks();
+      vi.unmock('@liaison/utils');
     });
 
-    it('should throw if iframe src is not a valid url', () => {
+    it('throws', () => {
       expect(
         () =>
-          new ParentContract('id', 'file://some/file/path', {
-            // eslint-disable-next-line @typescript-eslint/no-empty-function
-            someEffect: () => {},
+          new ParentContract(id, 'https://google.com', {
+            foo: () => {
+              console.log('bar');
+            },
           })
-      ).toThrow();
-    });
-
-    it('should add an event listener to the window', () => {
-      new ParentContract('id', 'https://example.com', {
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
-        someEffect: () => {},
-      });
-      expect(addEventListenerSpy).toHaveBeenCalled();
+      ).toThrow(`An iframe with an id of ${id} could not be found on the page`);
     });
   });
 });
 
 describe('IFrameContract', () => {
-  let addEventListenerSpy: MockInstance;
-
-  beforeEach(() => {
-    vi.spyOn(document, 'getElementById').mockReturnValue({
-      nodeName: 'IFRAME',
-      contentWindow: {
-        postMessage: vi.fn(),
-      },
-    } as unknown as HTMLIFrameElement);
-
-    addEventListenerSpy = vi
-      .spyOn(window, 'addEventListener')
-      .mockReturnValue();
-  });
-
-  afterEach(() => {
-    vi.resetAllMocks();
-  });
-
-  it('should throw when targetOrigin is not a valid url', () => {
-    expect(
-      () =>
-        new IFrameContract('file://some/file/path', {
-          // eslint-disable-next-line @typescript-eslint/no-empty-function
-          someEffect: () => {},
-        })
-    ).toThrow();
-  });
-
-  it('should add an event listener to the window', () => {
-    new IFrameContract('https://example.com', {
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
-      someEffect: () => {},
+  describe('when the targetOrigin is not a valid url', () => {
+    it('throws', () => {
+      expect(
+        () =>
+          new IFrameContract('foo', {
+            bar: () => {
+              console.log('baz');
+            },
+          })
+      ).toThrow();
     });
-    expect(addEventListenerSpy).toHaveBeenCalled();
+  });
+
+  describe('when effects are not valid', () => {
+    it('throws', () => {
+      const effect = null as unknown as Effect;
+      expect(
+        () =>
+          new IFrameContract('https://google.com', {
+            foo: effect,
+          })
+      ).toThrow(`${effect} is not a valid effect`);
+    });
   });
 });

@@ -1,0 +1,7 @@
+{
+    "entryPoints": ["apps/*", "libs/*"],
+    "name": "Liaison Documentation",
+    "entryPointStrategy": "packages",
+    "includeVersion": false,
+    "logLevel": "Verbose"
+}
