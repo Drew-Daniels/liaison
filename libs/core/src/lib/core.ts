@@ -15,10 +15,9 @@ abstract class Contract {
     this.effects = validateEffects(effects);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   abstract cb(this: Contract, signal: Signal): void;
 
-  public destroy() {
+  destroy() {
     window.removeEventListener('message', this.onMessageEvent);
   }
 
@@ -45,7 +44,8 @@ abstract class Contract {
 }
 
 /**
- * 1gt
+ * `ParentContract` is used to define a contract with an embedded iframe with an id of `iframeId` and an origin of `targetOrigin`.
+ * All the effects defined in the parent contract are ones that the parent window can request be called at any time in the iframe.
  */
 export class ParentContract extends Contract {
   private readonly iframe: HTMLIFrameElement;
@@ -65,6 +65,10 @@ export class ParentContract extends Contract {
   }
 }
 
+/**
+ * The `IFrameContract` class is used to define a contract with a parent window with an origin of `targetOrigin`.
+ * All the effects defined in the iframe contract are ones that the parent window can request be called at any time in the iframe.
+ */
 export class IFrameContract extends Contract {
   constructor(targetOrigin: string, effects: Record<string, Effect>) {
     super(targetOrigin, effects);
