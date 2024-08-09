@@ -21,10 +21,8 @@ describe('useParentContract', () => {
   it('should return a callback function', () => {
     const { result } = renderHook(() =>
       useParentContract({
-        iframe: {
-          id: 'id',
-          src: 'src',
-        },
+        iframeId: 'id',
+        iframeSrc: 'src',
         effects: {
           // eslint-disable-next-line @typescript-eslint/no-empty-function
           myCustomEffect: () => {},
